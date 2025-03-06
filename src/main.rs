@@ -1,6 +1,8 @@
 #![no_std]
 #![no_main]
 
+extern crate panic_semihosting;
+
 use core::convert::Infallible;
 use core::mem;
 use core::ops::Deref;
