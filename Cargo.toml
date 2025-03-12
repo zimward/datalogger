@@ -1,5 +1,5 @@
 [package]
-name = "keyboard_firmware"
+name = "datenlogger"
 version = "0.1.0"
 edition = "2021"
 

@@ -24,8 +24,6 @@ use stm32f1xx_hal::timer::{Counter, Event};
 use stm32f1xx_hal::usb::{Peripheral, UsbBus, UsbBusType};
 use stm32f1xx_hal::{device::interrupt, prelude::*, stm32};
 
-//static mut G_TIMER2: Option<Timer<Timer2>> = None;
-//static mut G_TIMER1: Option<Timer<TIMER1>> = None;
 static mut G_TIMER3: Option<Counter<TIM3, 10000>> = None;
 
 //Time overflow after ~119,3h
@@ -36,13 +34,25 @@ fn get_millis() -> usize {
 
 #[allow(
     non_snake_case,
-    clippy::unwrap_used,
     clippy::similar_names,
     clippy::too_many_lines
 )]
+
+/*
+#######################
+pin  funktion
+PB1  usb dp pin pullup
+PA0  messkanal B
+PA1  messkanal A
+PA2  status LED
+Boot0 start/stop -- in dokumentation nach remap möglichkeit schauen.        
+
+#######################
+*/
 #[entry]
 fn main() -> ! {
-    let take = stm32::Peripherals::take().unwrap();
+    //sollte das fehlschlagen haben wir andere probleme
+    let take =unsafe{ stm32::Peripherals::take().unwrap_unchecked()};
     let dp = take;
 
     let mut flash = dp.FLASH.constrain();
@@ -59,7 +69,8 @@ fn main() -> ! {
 
     let mut gpioa = dp.GPIOA.split();
     let mut gpiob = dp.GPIOB.split();
-    let mut led = gpiob.pb8.into_push_pull_output(&mut gpiob.crh);
+    let mut led = gpioa.pa2.into_push_pull_output(&mut gpioa.crh);
+    // let mut led = gpioa.pa2.into_push_pull_output(&mut gpioa.crh);
 
     {
         let mut tm3: Counter<TIM3, 10000> = dp.TIM3.counter(&clocks);
@@ -79,7 +90,6 @@ fn main() -> ! {
     }
 }
 
-#[allow(clippy::unwrap_used)]
 #[interrupt]
 fn TIM3() {
     cortex_m::interrupt::free(|cs| {
