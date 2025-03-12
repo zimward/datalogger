@@ -32,12 +32,7 @@ fn get_millis() -> usize {
     unsafe { TIME.load(Relaxed) }
 }
 
-#[allow(
-    non_snake_case,
-    clippy::similar_names,
-    clippy::too_many_lines
-)]
-
+#[allow(non_snake_case, clippy::similar_names, clippy::too_many_lines)]
 /*
 #######################
 pin  funktion
@@ -45,14 +40,14 @@ PB1  usb dp pin pullup
 PA0  messkanal B
 PA1  messkanal A
 PA2  status LED
-Boot0 start/stop -- in dokumentation nach remap möglichkeit schauen.        
+Boot0 start/stop -- in dokumentation nach remap möglichkeit schauen.
 
 #######################
 */
 #[entry]
 fn main() -> ! {
     //sollte das fehlschlagen haben wir andere probleme
-    let take =unsafe{ stm32::Peripherals::take().unwrap_unchecked()};
+    let take = unsafe { stm32::Peripherals::take().unwrap_unchecked() };
     let dp = take;
 
     let mut flash = dp.FLASH.constrain();
@@ -69,8 +64,7 @@ fn main() -> ! {
 
     let mut gpioa = dp.GPIOA.split();
     let mut gpiob = dp.GPIOB.split();
-    let mut led = gpioa.pa2.into_push_pull_output(&mut gpioa.crh);
-    // let mut led = gpioa.pa2.into_push_pull_output(&mut gpioa.crh);
+    let mut led = gpioa.pa2.into_push_pull_output(&mut gpioa.crl);
 
     {
         let mut tm3: Counter<TIM3, 10000> = dp.TIM3.counter(&clocks);
