@@ -9,6 +9,7 @@ use core::ops::Deref;
 use core::sync::atomic::AtomicU32;
 use core::sync::atomic::Ordering::Relaxed;
 
+use avg::Avg;
 use cortex_m::asm::delay;
 use cortex_m::interrupt::Mutex;
 use cortex_m::singleton;
@@ -17,16 +18,17 @@ use cortex_m_semihosting::hprintln;
 use cortex_m_rt::entry;
 
 use led::Led;
-use stm32f1xx_hal::adc::{Adc, AdcDma, SampleTime, SetChannels};
-use stm32f1xx_hal::dma::{dma1, Half, RxDma, Transfer};
+use stm32f1xx_hal::adc::{Adc, SampleTime, SetChannels};
+use stm32f1xx_hal::dma::Half;
 use stm32f1xx_hal::gpio::{Analog, PA0, PA1};
-use stm32f1xx_hal::pac::{adc1, tim6, ADC1, NVIC, TIM1, TIM2, TIM3};
+use stm32f1xx_hal::pac::{ADC1, NVIC, TIM3};
 
 use stm32f1xx_hal::timer::Tim2NoRemap;
-use stm32f1xx_hal::timer::{pwm, Counter, CounterHz, Event, Timer};
+use stm32f1xx_hal::timer::{Counter, Event, Timer};
 
 use stm32f1xx_hal::{device::interrupt, prelude::*, stm32};
 
+mod avg;
 mod led;
 
 static mut G_TIMER3: Option<Counter<TIM3, 10000>> = None;
@@ -129,13 +131,17 @@ fn main() -> ! {
     led.set_mode(led::LedMode::Breathe);
     let mut last = get_millis();
     let dma_buffer = {
-        let b = singleton!(: [[u16;8];2]=[[0;8];2]);
+        let b = singleton!(: [[u16;32];2]=[[0;32];2]);
         //ugly unwrap to prevent panics in release build
         assert!(b.is_some());
         unsafe { b.unwrap_unchecked() }
     };
     let mut adc_buffer = adc.circ_read(dma_buffer);
     let mut last_half = Half::First;
+
+    let mut channel_a_avg = Avg::new(200);
+    let mut channel_b_avg = Avg::new(200);
+
     loop {
         //100 Hz loop for uncritical purposes (LED)
         if last + 10 <= get_millis() {
@@ -147,12 +153,22 @@ fn main() -> ! {
                 if half != last_half {
                     last_half = half;
                     if let Ok(half) = adc_buffer.peek(|half, _| *half) {
-                        //read buffer
+                        for vals in half.windows(2) {
+                            //read vals
+                            channel_a_avg.update(vals[0]).map(|v| {
+                                todo!();
+                                //write values to buffer of sd card
+                            });
+                            channel_b_avg.update(vals[1]).map(|v| {
+                                todo!();
+                            });
+                        }
                     } //else overrun
                 }
                 //else already read
             }
             Err(err) => {
+                //should always be unreachable, unless we do too much work in the read loop
                 unreachable!("DMA overrun")
             }
         }
