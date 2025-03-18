@@ -3,9 +3,6 @@
 
 extern crate panic_semihosting;
 
-use core::convert::Infallible;
-use core::mem;
-use core::ops::Deref;
 use core::sync::atomic::AtomicU32;
 use core::sync::atomic::Ordering::Relaxed;
 
@@ -17,12 +14,14 @@ use cortex_m_semihosting::hprintln;
 
 use cortex_m_rt::entry;
 
+use embedded_hal::spi::{self, Mode};
 use led::Led;
 use stm32f1xx_hal::adc::{Adc, SampleTime, SetChannels};
 use stm32f1xx_hal::dma::Half;
 use stm32f1xx_hal::gpio::{Analog, PA0, PA1};
 use stm32f1xx_hal::pac::{ADC1, NVIC, TIM3};
 
+use stm32f1xx_hal::spi::Spi;
 use stm32f1xx_hal::timer::Tim2NoRemap;
 use stm32f1xx_hal::timer::{Counter, Event, Timer};
 
@@ -31,7 +30,7 @@ use stm32f1xx_hal::{device::interrupt, prelude::*, stm32};
 mod avg;
 mod led;
 
-static mut G_TIMER3: Option<Counter<TIM3, 10000>> = None;
+static mut G_TIMER3: Option<Counter<TIM3, 1000>> = None;
 
 //Time overflow after ~119,3h
 static mut TIME: AtomicU32 = AtomicU32::new(0);
@@ -74,7 +73,8 @@ fn main() -> ! {
     let mut gpioa = dp.GPIOA.split();
 
     let dma_ch1 = dp.DMA1.split();
-    // let mut gpiob = dp.GPIOB.split();
+
+    //ADC dma config
     let adc = {
         struct AdcPins(PA0<Analog>, PA1<Analog>);
         impl SetChannels<AdcPins> for Adc<ADC1> {
@@ -100,6 +100,19 @@ fn main() -> ! {
         adc.with_scan_dma(AdcPins(channelB, channelA), dma_ch1.1)
     };
 
+    //SPI config
+    let gpiob = dp.GPIOB.split();
+    {
+        let pins = (gpiob.pb13, gpiob.pb14, gpiob.pb15);
+        let spi_mode = Mode {
+            polarity: embedded_hal::spi::Polarity::IdleLow,
+            phase: embedded_hal::spi::Phase::CaptureOnFirstTransition,
+        };
+
+        let spi = Spi::spi2(dp.SPI2, pins, spi_mode, 100.kHz(), clocks);
+    }
+    //LED config
+
     let mut led = {
         let led_pin = gpioa.pa2.into_alternate_push_pull(&mut gpioa.crl);
         let mut pwm = Timer::new(dp.TIM2, &clocks).pwm_hz::<Tim2NoRemap, _, _>(
@@ -116,8 +129,9 @@ fn main() -> ! {
         )
     };
 
+    //system timer setup
     {
-        let mut tm3: Counter<TIM3, 10000> = dp.TIM3.counter(&clocks);
+        let mut tm3: Counter<TIM3, 1000> = dp.TIM3.counter(&clocks);
         let _ = tm3.start(1.millis());
         tm3.listen(Event::Update);
 
