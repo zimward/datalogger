@@ -3,32 +3,36 @@
 
 extern crate panic_semihosting;
 
+use core::ops::DerefMut;
 use core::sync::atomic::AtomicU32;
 use core::sync::atomic::Ordering::Relaxed;
 
 use avg::Avg;
-use cortex_m::asm::delay;
-use cortex_m::interrupt::Mutex;
 use cortex_m::singleton;
 use cortex_m_semihosting::hprintln;
 
 use cortex_m_rt::entry;
 
 use embedded_hal::spi::{self, Mode};
+use embedded_sdmmc::{BlockDevice, Directory, SdCard, VolumeIdx, VolumeManager};
 use led::Led;
+use sdcard::{sderror, FakeTimeSource};
+use serde::Deserialize;
+use serde_csv_core::csv_core;
 use stm32f1xx_hal::adc::{Adc, SampleTime, SetChannels};
 use stm32f1xx_hal::dma::Half;
 use stm32f1xx_hal::gpio::{Analog, PA0, PA1};
-use stm32f1xx_hal::pac::{ADC1, NVIC, TIM3};
+use stm32f1xx_hal::pac::{ADC1, NVIC, TIM1, TIM3};
 
 use stm32f1xx_hal::spi::Spi;
-use stm32f1xx_hal::timer::Tim2NoRemap;
-use stm32f1xx_hal::timer::{Counter, Event, Timer};
+use stm32f1xx_hal::timer::{Counter, Event, SysDelay, Timer};
+use stm32f1xx_hal::timer::{DelayUs, Tim2NoRemap};
 
 use stm32f1xx_hal::{device::interrupt, prelude::*, stm32};
 
 mod avg;
 mod led;
+mod sdcard;
 
 static mut G_TIMER3: Option<Counter<TIM3, 1000>> = None;
 
@@ -40,6 +44,20 @@ fn get_millis() -> u32 {
 
 //slowest sample time for adc
 const SAMPLE_TIME: SampleTime = SampleTime::T_239;
+
+#[derive(serde::Deserialize, PartialEq, Eq)]
+enum CaptureMode {
+    A,
+    B,
+    Delta,
+}
+
+#[derive(serde::Deserialize)]
+struct Config {
+    ms_per_sample: u32,
+    mode: CaptureMode,
+    factor_per_ma: f32,
+}
 
 /*
 #######################
@@ -57,6 +75,7 @@ PB0 start/stop -- in dokumentation nach remap möglichkeit schauen.
 fn main() -> ! {
     //must only be executed once in the entire program
     let dp = unsafe { stm32::Peripherals::steal() };
+    let cp = unsafe { cortex_m::Peripherals::steal() };
 
     let mut flash = dp.FLASH.constrain();
     let rcc = dp.RCC.constrain();
@@ -101,17 +120,23 @@ fn main() -> ! {
     };
 
     //SPI config
-    let gpiob = dp.GPIOB.split();
-    {
-        let pins = (gpiob.pb13, gpiob.pb14, gpiob.pb15);
+    let mut gpiob = dp.GPIOB.split();
+    let spi = {
+        let pins = (
+            gpiob.pb13.into_alternate_push_pull(&mut gpiob.crh),
+            gpiob.pb14.into_pull_up_input(&mut gpiob.crh),
+            gpiob.pb15.into_alternate_push_pull(&mut gpiob.crh),
+        );
         let spi_mode = Mode {
             polarity: embedded_hal::spi::Polarity::IdleLow,
             phase: embedded_hal::spi::Phase::CaptureOnFirstTransition,
         };
 
         let spi = Spi::spi2(dp.SPI2, pins, spi_mode, 100.kHz(), clocks);
-    }
-    //LED config
+        //maybe implement "blocking" Transfer and write for the dma object
+        // spi.with_tx_dma(dma_ch1.5)
+        spi
+    };
 
     let mut led = {
         let led_pin = gpioa.pa2.into_alternate_push_pull(&mut gpioa.crl);
@@ -128,6 +153,32 @@ fn main() -> ! {
             max_duty,
         )
     };
+
+    let delay = cp.SYST.delay(&clocks);
+
+    let sdcard = SdCard::new(spi, gpiob.pb9.into_push_pull_output(&mut gpiob.crh), delay);
+    let mut volume_mgr = VolumeManager::new(sdcard, FakeTimeSource::new());
+    let vol0 = volume_mgr
+        .open_volume(VolumeIdx(0))
+        .unwrap_or_else(|_| sderror(&mut led));
+    let root = volume_mgr
+        .open_root_dir(vol0)
+        .unwrap_or_else(|_| sderror(&mut led));
+    let mut config = volume_mgr
+        .open_file_in_dir(root, "config.ini", embedded_sdmmc::Mode::ReadOnly)
+        .unwrap_or_else(|_| sderror(&mut led));
+    let mut buffer = [0u8; 512];
+    volume_mgr.read(config, &mut buffer);
+    let reader = serde_csv_core::Reader::<32>::new();
+    reader.deserialize(input)
+    let cfg: Config = Config::deserialize(&mut reader).unwrap_or_else(|_| {
+        loop {
+            cortex_m::asm::delay(100);
+            //error
+        }
+    });
+
+    //LED config
 
     //system timer setup
     {
