@@ -14,7 +14,7 @@ use cortex_m_rt::entry;
 use embedded_hal::spi::Mode;
 use embedded_sdmmc::{BlockDevice, File, SdCard, TimeSource, VolumeIdx, VolumeManager};
 use led::Led;
-use sdcard::{sderror, FakeTimeSource};
+use sdcard::{config_error, sderror, FakeTimeSource};
 use stm32f1xx_hal::adc::{Adc, SampleTime, SetChannels};
 use stm32f1xx_hal::dma::Half;
 use stm32f1xx_hal::gpio::{Analog, PA0, PA1};
@@ -207,7 +207,7 @@ fn main() -> ! {
     }
 
     let cfg = cfg.unwrap_or_else(|| {
-        sderror(&mut led);
+        config_error(&mut led);
     });
 
     let outfile = volume_mgr
