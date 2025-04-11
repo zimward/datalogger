@@ -3,7 +3,6 @@
 
 extern crate panic_semihosting;
 
-use core::ops::DerefMut;
 use core::sync::atomic::AtomicU32;
 use core::sync::atomic::Ordering::Relaxed;
 
@@ -22,11 +21,11 @@ use serde_csv_core::csv_core;
 use stm32f1xx_hal::adc::{Adc, SampleTime, SetChannels};
 use stm32f1xx_hal::dma::Half;
 use stm32f1xx_hal::gpio::{Analog, PA0, PA1};
-use stm32f1xx_hal::pac::{ADC1, NVIC, TIM1, TIM3};
+use stm32f1xx_hal::pac::{ADC1, NVIC, TIM3};
 
 use stm32f1xx_hal::spi::Spi;
-use stm32f1xx_hal::timer::{Counter, Event, SysDelay, Timer};
-use stm32f1xx_hal::timer::{DelayUs, Tim2NoRemap};
+use stm32f1xx_hal::timer::Tim2NoRemap;
+use stm32f1xx_hal::timer::{Counter, Event, Timer};
 
 use stm32f1xx_hal::{device::interrupt, prelude::*, stm32};
 
@@ -44,19 +43,22 @@ fn get_millis() -> u32 {
 
 //slowest sample time for adc
 const SAMPLE_TIME: SampleTime = SampleTime::T_239;
-
-#[derive(serde::Deserialize, PartialEq, Eq)]
-enum CaptureMode {
-    A,
-    B,
-    Delta,
-}
+const SAMPLE_FREQ: u32 = 8_000_000 / 239; // 12MHz adc clock, 1.5 cycle per conversion averaged over 239 cycle
 
 #[derive(serde::Deserialize)]
 struct Config {
     ms_per_sample: u32,
-    mode: CaptureMode,
     factor_per_ma: f32,
+}
+
+#[derive(serde::Serialize)]
+struct DataPair(f32, f32);
+
+fn convert(factor_per_ma: f32, value: u32) -> f32 {
+    #[allow(clippy::cast_precision_loss)]
+    let u = (value as f32) * (3.3 / 1024.0);
+    let current = u / (65_000.0 * 25.0 / (10_000.0 + 25.0) * 1000.0);
+    current * factor_per_ma
 }
 
 /*
@@ -168,16 +170,27 @@ fn main() -> ! {
         .open_file_in_dir(root, "config.ini", embedded_sdmmc::Mode::ReadOnly)
         .unwrap_or_else(|_| sderror(&mut led));
     let mut buffer = [0u8; 512];
-    volume_mgr.read(config, &mut buffer);
-    let reader = serde_csv_core::Reader::<32>::new();
-    reader.deserialize(input)
-    let cfg: Config = Config::deserialize(&mut reader).unwrap_or_else(|_| {
-        loop {
-            cortex_m::asm::delay(100);
-            //error
+    let mut reader = serde_csv_core::Reader::<32>::new();
+    let mut cfg: Option<Config> = None;
+    loop {
+        let bytes = volume_mgr.read(config, &mut buffer);
+        if let Ok(bytes) = bytes {
+            if bytes == 0 {
+                break;
+            }
+            let record = reader.deserialize::<Config>(&buffer);
+            if let Ok((conf, _)) = record {
+                cfg = Some(conf);
+                break;
+            }
+        } else {
+            break;
         }
-    });
+    }
 
+    let cfg = cfg.unwrap_or_else(|| {
+        sderror(&mut led);
+    });
     //LED config
 
     //system timer setup
@@ -204,8 +217,8 @@ fn main() -> ! {
     let mut adc_buffer = adc.circ_read(dma_buffer);
     let mut last_half = Half::First;
 
-    let mut channel_a_avg = Avg::new(200);
-    let mut channel_b_avg = Avg::new(200);
+    let mut channel_a_avg = Avg::new(cfg.ms_per_sample * SAMPLE_FREQ / 1000);
+    let mut channel_b_avg = Avg::new(cfg.ms_per_sample * SAMPLE_FREQ / 1000);
 
     loop {
         //100 Hz loop for uncritical purposes (LED)
@@ -220,19 +233,21 @@ fn main() -> ! {
                     if let Ok(half) = adc_buffer.peek(|half, _| *half) {
                         for vals in half.windows(2) {
                             //read vals
-                            channel_a_avg.update(vals[0]).map(|v| {
-                                todo!();
-                                //write values to buffer of sd card
-                            });
-                            channel_b_avg.update(vals[1]).map(|v| {
-                                todo!();
-                            });
+                            let a = channel_a_avg
+                                .update(vals[0])
+                                .map(|v| convert(cfg.factor_per_ma, v));
+                            let b = channel_b_avg
+                                .update(vals[1])
+                                .map(|v| convert(cfg.factor_per_ma, v));
+                            if let (Some(a), Some(b)) = (a, b) {
+                                let pair = DataPair(a, b);
+                            }
                         }
                     } //else overrun
                 }
                 //else already read
             }
-            Err(err) => {
+            Err(_) => {
                 //should always be unreachable, unless we do too much work in the read loop
                 unreachable!("DMA overrun")
             }
