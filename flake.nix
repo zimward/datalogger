@@ -15,7 +15,8 @@
       devShells.x86_64-linux.default = pkgs.mkShell {
         buildInputs = with pkgs; [
           rustup
-          gcc-arm-embedded
+          (gcc-arm-embedded.override { python39 = pkgs.python39Packages.python; })
+          openocd
         ];
       };
     };

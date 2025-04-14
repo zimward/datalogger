@@ -3,14 +3,17 @@
 
 extern crate panic_semihosting;
 
+use core::char;
 use core::sync::atomic::AtomicU32;
 use core::sync::atomic::Ordering::Relaxed;
 
 use avg::Avg;
+use cortex_m::asm::nop;
 use cortex_m::singleton;
 
 use cortex_m_rt::entry;
 
+use cortex_m_semihosting::{hprint, hprintln};
 use embedded_hal::spi::Mode;
 use embedded_sdmmc::{BlockDevice, File, SdCard, TimeSource, VolumeIdx, VolumeManager};
 use led::Led;
@@ -40,8 +43,8 @@ fn get_millis() -> u32 {
 
 //slowest sample time for adc
 const SAMPLE_TIME: SampleTime = SampleTime::T_239;
-const SAMPLE_FREQ: u32 = 8_000_000 / 239; // 12MHz adc clock, 1.5 cycle per conversion averaged over 239 cycle
-                                          // 8E6 = 12E6 / 1.5
+const SAMPLE_FREQ: u32 = 1_333_333 / 239; // 2MHz adc clock, 1.5 cycle per conversion averaged over 239 cycle
+                                          // 1_333_333 = 2E6 / 1.5
 
 #[derive(serde::Deserialize)]
 struct Config {
@@ -104,6 +107,7 @@ fn main() -> ! {
         .use_hse(8.MHz())
         .sysclk(48.MHz())
         .pclk1(24.MHz())
+        .adcclk(2.MHz())
         .freeze(&mut flash.acr);
     assert!(clocks.usbclk_valid());
 
@@ -143,40 +147,46 @@ fn main() -> ! {
     let mut gpiob = dp.GPIOB.split();
     let spi = {
         let pins = (
-            gpiob.pb13.into_alternate_push_pull(&mut gpiob.crh),
-            gpiob.pb14.into_pull_up_input(&mut gpiob.crh),
-            gpiob.pb15.into_alternate_push_pull(&mut gpiob.crh),
+            gpioa.pa5.into_alternate_push_pull(&mut gpioa.crl),
+            gpioa.pa6.into_pull_up_input(&mut gpioa.crl),
+            gpioa.pa7.into_alternate_push_pull(&mut gpioa.crl),
         );
         let spi_mode = Mode {
             polarity: embedded_hal::spi::Polarity::IdleLow,
             phase: embedded_hal::spi::Phase::CaptureOnFirstTransition,
         };
-
-        let spi = Spi::spi2(dp.SPI2, pins, spi_mode, 100.kHz(), clocks);
+        let spi = Spi::spi1(dp.SPI1, pins, &mut afio.mapr, spi_mode, 100.kHz(), clocks);
         //maybe implement "blocking" Transfer and write for the dma object
-        // spi.with_tx_dma(dma_ch1.5)
+        // spi.with_tx_dma(dma_ch1)
         spi
     };
 
     let mut led = {
-        let led_pin = gpioa.pa2.into_alternate_push_pull(&mut gpioa.crl);
-        let mut pwm = Timer::new(dp.TIM2, &clocks).pwm_hz::<Tim2NoRemap, _, _>(
-            led_pin,
-            &mut afio.mapr,
-            1.kHz(),
-        );
-        let max_duty = pwm.get_max_duty();
+        // let led_pin = gpioa.pa2.into_alternate_push_pull(&mut gpioa.crl);
+        let mut led_pin = gpioa.pa2.into_push_pull_output(&mut gpioa.crl);
+        // let mut pwm = Timer::new(dp.TIM2, &clocks).pwm_hz::<Tim2NoRemap, _, _>(
+        //     led_pin,
+        //     &mut afio.mapr,
+        //     1.kHz(),
+        // );
+        // let max_duty = pwm.get_max_duty();
         Led::new(
             move |duty| {
-                pwm.set_duty(stm32f1xx_hal::timer::Channel::C3, duty);
+                // pwm.set_duty(stm32f1xx_hal::timer::Channel::C3, duty);
+                if duty == 0 {
+                    led_pin.set_low();
+                } else {
+                    led_pin.set_high();
+                }
             },
-            max_duty,
+            255,
         )
     };
+    led.set_mode(led::LedMode::On);
 
     let delay = cp.SYST.delay(&clocks);
 
-    let sdcard = SdCard::new(spi, gpiob.pb9.into_push_pull_output(&mut gpiob.crh), delay);
+    let sdcard = SdCard::new(spi, gpioa.pa4.into_push_pull_output(&mut gpioa.crl), delay);
     let mut volume_mgr = VolumeManager::new(sdcard, FakeTimeSource::new());
     let vol0 = volume_mgr
         .open_volume(VolumeIdx(0))
@@ -188,25 +198,31 @@ fn main() -> ! {
         .open_file_in_dir(root, "config.csv", embedded_sdmmc::Mode::ReadOnly)
         .unwrap_or_else(|_| sderror(&mut led));
     let mut buffer = [0u8; 512];
-    let mut reader = serde_csv_core::Reader::<32>::new();
-    let mut cfg: Option<Config> = None;
-    loop {
-        let bytes = volume_mgr.read(config, &mut buffer);
-        if let Ok(bytes) = bytes {
-            if bytes == 0 {
-                break;
-            }
-            let record = reader.deserialize::<Config>(&buffer);
-            if let Ok((conf, _)) = record {
-                cfg = Some(conf);
-                break;
-            }
-        } else {
-            break;
-        }
-    }
 
-    let cfg = cfg.unwrap_or_else(|| {
+    let cfg: Config = {
+        let mut binding = serde_csv_core::csv_core::ReaderBuilder::new();
+        let builder = binding.terminator(serde_csv_core::csv_core::Terminator::Any(b'\n'));
+        let mut reader = serde_csv_core::Reader::<32>::from_builder(builder);
+        let mut cfg = None;
+        loop {
+            let bytes = volume_mgr.read(config, &mut buffer);
+            if let Ok(bytes) = bytes {
+                if bytes == 0 {
+                    break; // EOF
+                }
+                let record = reader.deserialize::<Config>(&buffer);
+                if let Ok((conf, _)) = record {
+                    cfg = Some(conf);
+                    break;
+                }
+            } else {
+                //read is failing for some reason
+                sderror(&mut led);
+            }
+        }
+        cfg
+    }
+    .unwrap_or_else(|| {
         config_error(&mut led);
     });
 
@@ -214,7 +230,7 @@ fn main() -> ! {
         .open_file_in_dir(
             root,
             "out.csv",
-            embedded_sdmmc::Mode::ReadWriteCreateOrTruncate,
+            embedded_sdmmc::Mode::ReadWriteCreateOrAppend,
         )
         .unwrap_or_else(|_| sderror(&mut led));
     //LED config
@@ -232,21 +248,24 @@ fn main() -> ! {
         }
     }
 
-    led.set_mode(led::LedMode::Breathe);
+    // led.set_mode(led::LedMode::Breathe);
     let mut last = get_millis();
     let dma_buffer = {
-        let b = singleton!(: [[u16;32];2]=[[0;32];2]);
+        let b = singleton!(: [[u16;256];2]=[[0;256];2]);
         //ugly unwrap to prevent panics in release build
         assert!(b.is_some());
         unsafe { b.unwrap_unchecked() }
     };
-    let mut adc_buffer = adc.circ_read(dma_buffer);
     let mut last_half = Half::Second;
 
     let mut channel_a_avg = Avg::new(cfg.ms_per_sample * SAMPLE_FREQ / 1000);
     let mut channel_b_avg = Avg::new(cfg.ms_per_sample * SAMPLE_FREQ / 1000);
 
     let mut writer = serde_csv_core::Writer::new();
+    //start reading adc
+    let mut adc_buffer = adc.circ_read(dma_buffer);
+
+    let mut on = true;
 
     loop {
         //100 Hz loop for uncritical purposes (LED)
@@ -258,32 +277,45 @@ fn main() -> ! {
             Ok(half) => {
                 if half != last_half {
                     last_half = half;
-                    if let Ok(half) = adc_buffer.peek(|half, _| *half) {
-                        for vals in half.windows(2) {
-                            //read vals
-                            let a = channel_a_avg
-                                .update(vals[0])
-                                .map(|v| convert(cfg.factor_per_ma, v));
-                            let b = channel_b_avg
-                                .update(vals[1])
-                                .map(|v| convert(cfg.factor_per_ma, v));
-                            if let (Some(a), Some(b)) = (a, b) {
-                                let pair = DataPair(a, b);
-                                //one line should not be larger than 16 digits so this is enough margin
-                                let mut buf = [0u8; 32];
-                                if let Ok(size) = writer.serialize(&pair, &mut buf) {
-                                    //write to disk
-                                    save(&buf[..size], outfile, &mut volume_mgr, &mut led);
+                    match adc_buffer.peek(|half, _| *half) {
+                        Ok(half) => {
+                            for vals in half.windows(2) {
+                                // read vals
+                                let a = channel_a_avg
+                                    .update(vals[0])
+                                    .map(|v| convert(cfg.factor_per_ma, v));
+                                let b = channel_b_avg
+                                    .update(vals[1])
+                                    .map(|v| convert(cfg.factor_per_ma, v));
+                                if let (Some(a), Some(b)) = (a, b) {
+                                    let pair = DataPair(a, b);
+                                    //one line should not be larger than 16 digits so this is enough margin
+                                    let mut buf = [0u8; 32];
+                                    if let Ok(size) = writer.serialize(&pair, &mut buf) {
+                                        //write to disk
+                                        save(&buf[..size], outfile, &mut volume_mgr, &mut led);
+                                        if on {
+                                            led.set_mode(led::LedMode::Off);
+                                        } else {
+                                            led.set_mode(led::LedMode::On);
+                                        }
+                                        on = !on;
+                                    }
                                 }
                             }
                         }
-                    } //else overrun
+                        Err(e) => hprintln!("inner {:#?}", e),
+                    }
                 }
-                //else already read
             }
-            Err(_) => {
+            Err(e) => {
                 //should always be unreachable, unless we do too much work in the read loop
-                unreachable!("DMA overrun")
+                // unreachable!("DMA overrun")
+                hprintln!("outer {:#?}", e);
+                //reset dma
+                let (buf, adc) = adc_buffer.stop();
+                adc_buffer = adc.circ_read(buf);
+                last_half = Half::Second;
             }
         }
     }

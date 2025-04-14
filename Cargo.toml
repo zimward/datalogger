@@ -24,7 +24,7 @@ features = ["rt","stm32f103"]
 
 [profile.dev]
 codegen-units=1
-opt-level="z"
+opt-level="s"
 
 [profile.release]
 codegen-units= 1
