@@ -12,7 +12,6 @@ impl Avg {
             target,
         }
     }
-
     pub fn update(&mut self, value: u16) -> Option<u32> {
         //accumulator will overflow after 4000 years
         self.accumulator += u64::from(value);
@@ -20,8 +19,11 @@ impl Avg {
         self.count += 1;
 
         if self.count == self.target {
+            self.count = 0;
             #[allow(clippy::cast_possible_truncation)]
-            Some((self.accumulator / u64::from(self.count)) as u32)
+            let res = Some((self.accumulator / u64::from(self.target)) as u32);
+            self.accumulator = 0;
+            res
         } else {
             None
         }
