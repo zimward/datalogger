@@ -1,19 +1,18 @@
 #![no_std]
 #![no_main]
+#![allow(static_mut_refs)]
 
 extern crate panic_semihosting;
 
 use core::sync::atomic::AtomicU32;
 use core::sync::atomic::Ordering::Relaxed;
-use core::{char, ptr};
 
 use avg::Avg;
-use cortex_m::asm::{delay, nop};
+use cortex_m::asm::nop;
 use cortex_m::singleton;
 
 use cortex_m_rt::entry;
 
-use cortex_m_semihosting::{hprint, hprintln};
 use embedded_hal::spi::Mode;
 use embedded_sdmmc::{BlockDevice, File, SdCard, TimeSource, VolumeIdx, VolumeManager};
 use led::Led;
@@ -25,7 +24,7 @@ use stm32f1xx_hal::pac::{ADC1, NVIC, TIM3};
 
 use stm32f1xx_hal::spi::Spi;
 use stm32f1xx_hal::timer::Tim2NoRemap;
-use stm32f1xx_hal::timer::{Counter, Event, Timer};
+use stm32f1xx_hal::timer::{Counter, Event};
 
 use stm32f1xx_hal::{device::interrupt, prelude::*, stm32};
 
@@ -187,7 +186,7 @@ fn main() -> ! {
     };
     led.set_mode(led::LedMode::On);
 
-    let mut delay = cp.SYST.delay(&clocks);
+    let delay = cp.SYST.delay(&clocks);
 
     let sdcard = SdCard::new(spi, gpioa.pa4.into_push_pull_output(&mut gpioa.crl), delay);
     let mut volume_mgr = VolumeManager::new(sdcard, FakeTimeSource::new());
@@ -283,7 +282,6 @@ fn main() -> ! {
             let start = get_millis();
             while start + 30 > get_millis() {} //debounce delay
             while btn.is_high() {} //wait for button to be released
-            hprintln!("start recording");
             led.set_mode(led::LedMode::On);
             break;
         }
@@ -297,8 +295,9 @@ fn main() -> ! {
             last = get_millis();
             led.update();
         }
+
+        //stop button logic
         if btn.is_high() {
-            hprintln!("shutting down");
             volume_mgr
                 .close_file(outfile)
                 .unwrap_or_else(|_| sderror(&mut led));
@@ -314,42 +313,35 @@ fn main() -> ! {
             }
         }
 
-        match adc_buffer.readable_half() {
-            Ok(half) => {
-                if half != last_half {
-                    last_half = half;
-                    match adc_buffer.peek(|half, _| *half) {
-                        Ok(half) => {
-                            for vals in half.windows(2) {
-                                // read vals
-                                let a = channel_a_avg
-                                    .update(vals[0])
-                                    .map(|v| convert(cfg.factor_per_ma, v));
-                                let b = channel_b_avg
-                                    .update(vals[1])
-                                    .map(|v| convert(cfg.factor_per_ma, v));
-                                if let (Some(a), Some(b)) = (a, b) {
-                                    let pair = DataPair(a, b);
-                                    //one line should not be larger than 30 digits so this is enough margin
-                                    let mut buf = [0u8; 36];
-                                    if let Ok(size) = writer.serialize(&pair, &mut buf) {
-                                        //write to disk
-                                        save(&buf[..size], outfile, &mut volume_mgr, &mut led);
-                                    }
-                                }
+        if let Ok(half) = adc_buffer.readable_half() {
+            if half != last_half {
+                last_half = half;
+                if let Ok(half) = adc_buffer.peek(|half, _| *half) {
+                    for vals in half.windows(2) {
+                        // read vals
+                        let a = channel_a_avg
+                            .update(vals[0])
+                            .map(|v| convert(cfg.factor_per_ma, v));
+                        let b = channel_b_avg
+                            .update(vals[1])
+                            .map(|v| convert(cfg.factor_per_ma, v));
+                        if let (Some(a), Some(b)) = (a, b) {
+                            let pair = DataPair(a, b);
+                            //one line should not be larger than 30 digits so this is enough margin
+                            let mut buf = [0u8; 36];
+                            if let Ok(size) = writer.serialize(&pair, &mut buf) {
+                                //write to disk
+                                save(&buf[..size], outfile, &mut volume_mgr, &mut led);
                             }
                         }
-                        Err(e) => hprintln!("inner {:#?}", e),
                     }
                 }
             }
-            Err(e) => {
-                hprintln!("outer {:#?}", e);
-                //reset dma
-                let (buf, adc) = adc_buffer.stop();
-                adc_buffer = adc.circ_read(buf);
-                last_half = Half::Second;
-            }
+        } else {
+            //reset dma
+            let (buf, adc) = adc_buffer.stop();
+            adc_buffer = adc.circ_read(buf);
+            last_half = Half::Second;
         }
     }
 }
