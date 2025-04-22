@@ -3,12 +3,12 @@
 
 extern crate panic_semihosting;
 
-use core::char;
 use core::sync::atomic::AtomicU32;
 use core::sync::atomic::Ordering::Relaxed;
+use core::{char, ptr};
 
 use avg::Avg;
-use cortex_m::asm::nop;
+use cortex_m::asm::{delay, nop};
 use cortex_m::singleton;
 
 use cortex_m_rt::entry;
@@ -33,7 +33,7 @@ mod avg;
 mod led;
 mod sdcard;
 
-static mut G_TIMER3: Option<Counter<TIM3, 1000>> = None;
+static mut G_TIMER3: Option<Counter<TIM3, 10000>> = None;
 
 //Time overflow after ~119,3h
 static mut TIME: AtomicU32 = AtomicU32::new(0);
@@ -105,7 +105,7 @@ fn main() -> ! {
     let clocks = rcc
         .cfgr
         .use_hse(8.MHz())
-        .sysclk(48.MHz())
+        .sysclk(72.MHz())
         .pclk1(24.MHz())
         .adcclk(2.MHz())
         .freeze(&mut flash.acr);
@@ -118,7 +118,7 @@ fn main() -> ! {
     let dma_ch1 = dp.DMA1.split();
 
     //ADC dma config
-    let (mut adc, mut chA, mut chB) = {
+    let mut adc = {
         struct AdcPins(PA0<Analog>, PA1<Analog>);
         impl SetChannels<AdcPins> for Adc<ADC1> {
             fn set_sequence(&mut self) {
@@ -140,8 +140,8 @@ fn main() -> ! {
         let mut adc = Adc::adc1(dp.ADC1, clocks);
         //slowest sampling time should be sufficient
         adc.set_sample_time(stm32f1xx_hal::adc::SampleTime::T_239);
-        // adc.with_scan_dma(AdcPins(channelB, channelA), dma_ch1.1)
-        (adc, channelA, channelB)
+        adc.with_scan_dma(AdcPins(channelB, channelA), dma_ch1.1)
+        // (adc, channelA, channelB)
     };
 
     //SPI config
@@ -161,6 +161,8 @@ fn main() -> ! {
         // spi.with_tx_dma(dma_ch1)
         spi
     };
+
+    let btn = gpiob.pb0.into_floating_input(&mut gpiob.crl);
 
     let mut led = {
         // let led_pin = gpioa.pa2.into_alternate_push_pull(&mut gpioa.crl);
@@ -185,7 +187,7 @@ fn main() -> ! {
     };
     led.set_mode(led::LedMode::On);
 
-    let delay = cp.SYST.delay(&clocks);
+    let mut delay = cp.SYST.delay(&clocks);
 
     let sdcard = SdCard::new(spi, gpioa.pa4.into_push_pull_output(&mut gpioa.crl), delay);
     let mut volume_mgr = VolumeManager::new(sdcard, FakeTimeSource::new());
@@ -240,7 +242,7 @@ fn main() -> ! {
 
     //system timer setup
     {
-        let mut tm3: Counter<TIM3, 1000> = dp.TIM3.counter(&clocks);
+        let mut tm3: Counter<TIM3, 10000> = dp.TIM3.counter(&clocks);
         let _ = tm3.start(1.millis());
         tm3.listen(Event::Update);
 
@@ -261,14 +263,33 @@ fn main() -> ! {
     };
     let mut last_half = Half::Second;
 
-    let mut channel_a_avg = Avg::new(cfg.ms_per_sample);
-    let mut channel_b_avg = Avg::new(cfg.ms_per_sample);
-    // let mut channel_a_avg = Avg::new(cfg.ms_per_sample * SAMPLE_FREQ / 1000);
-    // let mut channel_b_avg = Avg::new(cfg.ms_per_sample * SAMPLE_FREQ / 1000);
+    let mut channel_a_avg = Avg::new(cfg.ms_per_sample * SAMPLE_FREQ / 1000);
+    let mut channel_b_avg = Avg::new(cfg.ms_per_sample * SAMPLE_FREQ / 1000);
 
     let mut writer = serde_csv_core::Writer::new();
+
+    let mut dir = false;
+    loop {
+        if last + 500 <= get_millis() {
+            last = get_millis();
+            if dir {
+                led.set_mode(led::LedMode::On);
+            } else {
+                led.set_mode(led::LedMode::Off);
+            }
+            dir = !dir;
+        }
+        if btn.is_high() {
+            let start = get_millis();
+            while start + 30 > get_millis() {} //debounce delay
+            while btn.is_high() {} //wait for button to be released
+            hprintln!("start recording");
+            led.set_mode(led::LedMode::On);
+            break;
+        }
+    }
     //start reading adc
-    // let mut adc_buffer = adc.circ_read(dma_buffer);
+    let mut adc_buffer = adc.circ_read(dma_buffer);
 
     loop {
         //100 Hz loop for uncritical purposes (LED)
@@ -276,51 +297,60 @@ fn main() -> ! {
             last = get_millis();
             led.update();
         }
-        // match adc_buffer.readable_half() {
-        //     Ok(half) => {
-        //         if half != last_half {
-        //             last_half = half;
-        //             match adc_buffer.peek(|half, _| *half) {
-        //                 Ok(half) => {
-        //                     for vals in half.windows(2) {
-        // read vals
-
-        let valA = adc.read(&mut chA).unwrap_or(0);
-        let valB = adc.read(&mut chB).unwrap_or(0);
-
-        let a = channel_a_avg
-            .update(valA)
-            .map(|v| convert(cfg.factor_per_ma, v));
-        let b = channel_b_avg
-            .update(valB)
-            .map(|v| convert(cfg.factor_per_ma, v));
-        if let (Some(a), Some(b)) = (a, b) {
-            let pair = DataPair(a, b);
-            //one line should not be larger than 16 digits so this is enough margin
-            let mut buf = [0u8; 32];
-            if let Ok(size) = writer.serialize(&pair, &mut buf) {
-                //write to disk
-                save(&buf[..size], outfile, &mut volume_mgr, &mut led);
-                hprintln!("writing data, {} bytes", size);
+        if btn.is_high() {
+            hprintln!("shutting down");
+            volume_mgr
+                .close_file(outfile)
+                .unwrap_or_else(|_| sderror(&mut led));
+            volume_mgr
+                .close_dir(root)
+                .unwrap_or_else(|_| sderror(&mut led));
+            volume_mgr
+                .close_volume(vol0)
+                .unwrap_or_else(|_| sderror(&mut led));
+            led.set_mode(led::LedMode::Off);
+            loop {
+                nop();
             }
         }
 
-        //                 }
-        //             }
-        //             Err(e) => hprintln!("inner {:#?}", e),
-        //         }
-        //     }
-        // }
-        //     Err(e) => {
-        //         //should always be unreachable, unless we do too much work in the read loop
-        //         // unreachable!("DMA overrun")
-        //         hprintln!("outer {:#?}", e);
-        //         //reset dma
-        //         let (buf, adc) = adc_buffer.stop();
-        //         adc_buffer = adc.circ_read(buf);
-        //         last_half = Half::Second;
-        //     }
-        // }
+        match adc_buffer.readable_half() {
+            Ok(half) => {
+                if half != last_half {
+                    last_half = half;
+                    match adc_buffer.peek(|half, _| *half) {
+                        Ok(half) => {
+                            for vals in half.windows(2) {
+                                // read vals
+                                let a = channel_a_avg
+                                    .update(vals[0])
+                                    .map(|v| convert(cfg.factor_per_ma, v));
+                                let b = channel_b_avg
+                                    .update(vals[1])
+                                    .map(|v| convert(cfg.factor_per_ma, v));
+                                if let (Some(a), Some(b)) = (a, b) {
+                                    let pair = DataPair(a, b);
+                                    //one line should not be larger than 30 digits so this is enough margin
+                                    let mut buf = [0u8; 36];
+                                    if let Ok(size) = writer.serialize(&pair, &mut buf) {
+                                        //write to disk
+                                        save(&buf[..size], outfile, &mut volume_mgr, &mut led);
+                                    }
+                                }
+                            }
+                        }
+                        Err(e) => hprintln!("inner {:#?}", e),
+                    }
+                }
+            }
+            Err(e) => {
+                hprintln!("outer {:#?}", e);
+                //reset dma
+                let (buf, adc) = adc_buffer.stop();
+                adc_buffer = adc.circ_read(buf);
+                last_half = Half::Second;
+            }
+        }
     }
 }
 
