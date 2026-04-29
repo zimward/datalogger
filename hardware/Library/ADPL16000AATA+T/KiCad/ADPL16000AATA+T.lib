@@ -1,0 +1,29 @@
+EESchema-LIBRARY Version 2.3
+#encoding utf-8
+#SamacSys ECAD Model ADPL16000AATA+T
+#/19813103/1573802/2.50/8/2/Integrated Circuit
+DEF ADPL16000AATA+T IC 0 30 Y Y 1 F N
+F0 "IC" 1250 300 50 H V L CNN
+F1 "ADPL16000AATA+T" 1250 200 50 H V L CNN
+F2 "ADPL16000AATAT" 1250 100 50 H I L CNN
+F3 "https://www.analog.com/media/en/technical-documentation/data-sheets/adpl16000.pdf" 1250 0 50 H I L CNN
+F4 "60V, 400mA, Ultra-Small, Hi gh-Efficiency, Synchronous Step-Down DC-DC Converters" 1250 -100 50 H I L CNN "Description"
+F5 "0.8" 1250 -200 50 H I L CNN "Height"
+F6 "700-ADPL16000AATA+T" 1250 -300 50 H I L CNN "Mouser Part Number"
+F7 "https://www.mouser.co.uk/ProductDetail/Analog-Devices-Maxim-Integrated/ADPL16000AATA%2bT?qs=wT7LY0lnAe0OnT0M8eXHew%3D%3D" 1250 -400 50 H I L CNN "Mouser Price/Stock"
+F8 "Analog Devices" 1250 -500 50 H I L CNN "Manufacturer_Name"
+F9 "ADPL16000AATA+T" 1250 -600 50 H I L CNN "Manufacturer_Part_Number"
+DRAW
+X VIN 1 0 0 200 R 50 50 0 0 P
+X EN/UVLO 2 0 -100 200 R 50 50 0 0 P
+X VCC 3 0 -200 200 R 50 50 0 0 P
+X FB/VOUT 4 0 -300 200 R 50 50 0 0 P
+X MODE 5 1400 0 200 L 50 50 0 0 P
+X ~RESET 6 1400 -100 200 L 50 50 0 0 P
+X GND 7 1400 -200 200 L 50 50 0 0 P
+X LX 8 1400 -300 200 L 50 50 0 0 P
+P 5 0 1 6 200 100 1200 100 1200 -400 200 -400 200 100 N
+ENDDRAW
+ENDDEF
+#
+#End Library

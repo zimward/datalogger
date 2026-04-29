@@ -1,0 +1,16 @@
+.ADPL16000AATA-plus-T :1 ;60V, 400mA, Ultra-Small, Hi gh-Efficiency, Synchronous Step-Down DC-DC Converters
+ADPL16000AATAT
+*STM IC
+*NGS
+*PLB 1="VIN" 2="EN/UVLO" 3="VCC" 4="FB/VOUT" 5="MODE" 6="'RESET'" 7="GND" 8="LX"
+*MXP 8
+*DFN ADPL16000AATA-plus-T
+~!Mouser Part Number (700-ADPL16000AATA+T)
+~!Link Mouser Price/Stock (https://www.mouser.co.uk/ProductDetail/Analog-Devices-Maxim-Integrated/ADPL16000AATA%2bT?qs=wT7LY0lnAe0OnT0M8eXHew%3D%3D)
+~!Manufacturer_Name (Analog Devices)
+~!Manufacturer_Part_Number (ADPL16000AATA+T)
+~!Link Datasheet (https://www.analog.com/media/en/technical-documentation/data-sheets/adpl16000.pdf)
+~!Height (0.8mm)
+~!3D_Model (ADPL16000AATA+T)
+ADPL16000AATA-plus-T
+1.1!U 2.1!U 3.1!U 4.1!U 5.1!U 6.1!U 7.1!U 8.1!U 

@@ -1,0 +1,17 @@
+.DM3AT-SF-PEJM5 :1 ;Memory Card Connectors R/A SMT MICROSD CON PUSH-PUSH TOP BRDMNT
+DM3ATSFPEJM5
+*STM J
+*NGS
+*PNM 1=1 2=2 3=3 4=4 5=5 6=6 7=7 8=8 9=MP1 10=MP2 11=MP3 12=MP4 13=MP5 14=MP6
+*PLB 1="DAT2" 2="CD/DAT3" 3="CMD" 4="VDD" 5="CLK" 6="VSS" 7="DAT0" 8="DAT1" 9="MP1" 10="MP2" 11="MP3" 12="MP4" 13="MP5" 14="MP6"
+*MXP 14
+*DFN DM3AT-SF-PEJM5
+~!Mouser Part Number (798-DM3AT-SF-PEJM5)
+~!Link Mouser Price/Stock (https://www.mouser.co.uk/ProductDetail/Hirose-Connector/DM3AT-SF-PEJM5?qs=LZSZKJVF%252B2WTDKp%252BR7IYAQ%3D%3D)
+~!Manufacturer_Name (Hirose)
+~!Manufacturer_Part_Number (DM3AT-SF-PEJM5)
+~!Link Datasheet (https://datasheet.lcsc.com/szlcsc/Hirose-HRS-DM3AT-SF-PEJM5_C114218.pdf)
+~!Height (1.83mm)
+~!3D_Model (DM3AT-SF-PEJM5)
+DM3AT-SF-PEJM5
+1.1!U 2.1!U 3.1!U 4.1!U 5.1!U 6.1!U 7.1!U 8.1!U 9.1!U 10.1!U 11.1!U 12.1!U 13.1!U 14.1!U 

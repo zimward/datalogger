@@ -1,0 +1,242 @@
+(footprint "SHDR4W70P508X254_2X2_768X1380X1275P"
+	(version 20240108)
+	(generator "pcbnew")
+	(generator_version "8.0")
+	(layer "F.Cu")
+	(descr "TBL003-254-02GR-2OR")
+	(tags "Connector")
+	(property "Reference" "J**"
+		(at 0 0 0)
+		(layer "F.SilkS")
+		(uuid "07385809-1a84-4a37-abb1-b5ed4c4ca6fd")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.254)
+			)
+		)
+	)
+	(property "Value" "SHDR4W70P508X254_2X2_768X1380X1275P"
+		(at 0 -2 0)
+		(layer "F.SilkS")
+		(hide yes)
+		(uuid "923a0b7c-fb5a-42b3-a88f-f17429a3108d")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.254)
+			)
+		)
+	)
+	(property "Footprint" ""
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "6dd45aee-0730-41bd-9818-1c02073cfdab")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Datasheet" ""
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "e994725a-9cf6-4446-87a8-0e5c51138191")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Description" ""
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "6f9940a8-2e6c-4fb4-a4f2-da944829b492")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(attr through_hole)
+	(fp_line
+		(start -1.25 -8.18)
+		(end -1.25 0)
+		(stroke
+			(width 0.2)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "e78654ca-162b-4335-9e51-d4d0065a35c8")
+	)
+	(fp_line
+		(start 0 5.62)
+		(end 6.43 5.62)
+		(stroke
+			(width 0.2)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "f17140cc-6b50-4aa7-92a8-677d168893cb")
+	)
+	(fp_line
+		(start 6.43 -8.18)
+		(end -1.25 -8.18)
+		(stroke
+			(width 0.2)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "0e5ba2c2-fc7d-4be8-ae54-21afe46c4103")
+	)
+	(fp_line
+		(start 6.43 5.62)
+		(end 6.43 -8.18)
+		(stroke
+			(width 0.2)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "f9accf1a-653c-4907-8da3-edd2dac7484d")
+	)
+	(fp_line
+		(start -1.24 -8.43)
+		(end 6.94 -8.43)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(layer "F.CrtYd")
+		(uuid "610ca331-0ed4-49f5-aef1-733bfa7e335d")
+	)
+	(fp_line
+		(start -1.24 5.87)
+		(end -1.24 -8.43)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(layer "F.CrtYd")
+		(uuid "ca8944ea-ae88-4ef2-9ec7-cf4d4cf292c9")
+	)
+	(fp_line
+		(start 6.94 -8.43)
+		(end 6.94 5.87)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(layer "F.CrtYd")
+		(uuid "1ece7d53-93f2-457e-a861-fa41a3cac183")
+	)
+	(fp_line
+		(start 6.94 5.87)
+		(end -1.24 5.87)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(layer "F.CrtYd")
+		(uuid "0c064562-4b04-4799-ba9a-089ccf69179b")
+	)
+	(fp_line
+		(start -0.99 -8.18)
+		(end 6.69 -8.18)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.Fab")
+		(uuid "d545def9-02cf-4335-b6e4-343db91b3abe")
+	)
+	(fp_line
+		(start -0.99 5.62)
+		(end -0.99 -8.18)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.Fab")
+		(uuid "6b13cb92-81f7-4560-94a7-afea2aa7d005")
+	)
+	(fp_line
+		(start 6.69 -8.18)
+		(end 6.69 5.62)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.Fab")
+		(uuid "ddab0dd6-b0b5-4c12-b9e1-5380dfa4e1dd")
+	)
+	(fp_line
+		(start 6.69 5.62)
+		(end -0.99 5.62)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.Fab")
+		(uuid "978f9708-fc19-4e37-bfeb-65d089ebcbc3")
+	)
+	(fp_text user "${REFERENCE}"
+		(at 0 0 0)
+		(layer "F.Fab")
+		(uuid "5d73a089-3ea9-49dd-b0bc-7ed228eb1252")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.254)
+			)
+		)
+	)
+	(pad "1" thru_hole rect
+		(at 0 0)
+		(size 1.8 1.8)
+		(drill 1.2)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "59a74575-4898-4e5e-9782-fee7f05a3a28")
+	)
+	(pad "1" thru_hole circle
+		(at 2.54 0)
+		(size 1.8 1.8)
+		(drill 1.2)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "e2b413b3-a5ff-42a4-8901-02f6f98264e3")
+	)
+	(pad "2" thru_hole circle
+		(at 0 -5.08)
+		(size 1.8 1.8)
+		(drill 1.2)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "c9aeb75a-cda8-44a1-8b28-0720c1727e7f")
+	)
+	(pad "2" thru_hole circle
+		(at 2.54 -5.08)
+		(size 1.8 1.8)
+		(drill 1.2)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "3f2ff7a9-5c66-4b75-a665-1e1c1dd0ab97")
+	)
+	(model "TBL003-254-02GR-2OR.stp"
+		(offset
+			(xyz 0 0 0)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz 0 0 0)
+		)
+	)
+)

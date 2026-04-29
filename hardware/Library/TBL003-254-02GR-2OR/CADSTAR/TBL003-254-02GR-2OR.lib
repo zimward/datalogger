@@ -1,0 +1,16 @@
+.TBL003-254-02GR-2OR :1 ;1~24 Poles, Screwless, Horizontal, 2.54 Pitch, 24~20 (AWG), Terminal Block Connector
+SHDR4W70P508X254_2X2_768X1380X1275P
+*STM J
+*NGS
+*PLB 1="1" 2="2" 3="3" 4="4"
+*MXP 4
+*DFN TBL003-254-02GR-2OR
+~!Mouser Part Number (490-TBL0032542GR2OR)
+~!Link Mouser Price/Stock (https://www.mouser.co.uk/ProductDetail/Same-Sky/TBL003-254-02GR-2OR?qs=PzGy0jfpSMu0qQixhMb9YA%3D%3D)
+~!Manufacturer_Name (Same Sky)
+~!Manufacturer_Part_Number (TBL003-254-02GR-2OR)
+~!Link Datasheet (https://www.sameskydevices.com/product/resource/supplyframepdf/tbl003-254.pdf)
+~!Height (12.75mm)
+~!3D_Model (TBL003-254-02GR-2OR)
+TBL003-254-02GR-2OR
+1.1!U 3.1!U 2.1!U 4.1!U 

@@ -1,0 +1,9 @@
+EESchema-DOCLIB  Version 2.0
+#
+$CMP TBL003-254-02GR-2OR
+D 1~24 Poles, Screwless, Horizontal, 2.54 Pitch, 24~20 (AWG), Terminal Block Connector
+K
+F https://www.sameskydevices.com/product/resource/supplyframepdf/tbl003-254.pdf
+$ENDCMP
+#
+#End Doc Library

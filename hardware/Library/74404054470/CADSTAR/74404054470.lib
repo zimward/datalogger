@@ -1,0 +1,16 @@
+.74404054470 :1 ;Wurth WE-LQS Series Shielded Wire-wound SMD Inductor 47 uH +/-20% 1A Idc
+"74404054470"
+*STM L
+*NGS
+*PLB 1="1" 2="2"
+*MXP 2
+*DFN 74404054470
+~!Mouser Part Number (710-74404054470)
+~!Link Mouser Price/Stock (https://www.mouser.co.uk/ProductDetail/Wurth-Elektronik/74404054470?qs=Zt3UNFD9mQjCehaSX3JlDg%3D%3D)
+~!Manufacturer_Name (Wurth Elektronik)
+~!Manufacturer_Part_Number (74404054470)
+~!Link Datasheet (http://katalog.we-online.de/pbs/datasheet/74404054470.pdf)
+~!Height (4mm)
+~!3D_Model (74404054470)
+"74404054470"
+1.1!U 2.1!U 

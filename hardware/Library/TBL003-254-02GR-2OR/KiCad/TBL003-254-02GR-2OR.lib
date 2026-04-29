@@ -1,0 +1,25 @@
+EESchema-LIBRARY Version 2.3
+#encoding utf-8
+#SamacSys ECAD Model TBL003-254-02GR-2OR
+#/4675330/1573802/2.50/4/2/Connector
+DEF TBL003-254-02GR-2OR J 0 30 Y Y 1 F N
+F0 "J" 650 300 50 H V L CNN
+F1 "TBL003-254-02GR-2OR" 650 200 50 H V L CNN
+F2 "SHDR4W70P508X254_2X2_768X1380X1275P" 650 100 50 H I L CNN
+F3 "https://www.sameskydevices.com/product/resource/supplyframepdf/tbl003-254.pdf" 650 0 50 H I L CNN
+F4 "1~24 Poles, Screwless, Horizontal, 2.54 Pitch, 24~20 (AWG), Terminal Block Connector" 650 -100 50 H I L CNN "Description"
+F5 "12.75" 650 -200 50 H I L CNN "Height"
+F6 "490-TBL0032542GR2OR" 650 -300 50 H I L CNN "Mouser Part Number"
+F7 "https://www.mouser.co.uk/ProductDetail/Same-Sky/TBL003-254-02GR-2OR?qs=PzGy0jfpSMu0qQixhMb9YA%3D%3D" 650 -400 50 H I L CNN "Mouser Price/Stock"
+F8 "Same Sky" 650 -500 50 H I L CNN "Manufacturer_Name"
+F9 "TBL003-254-02GR-2OR" 650 -600 50 H I L CNN "Manufacturer_Part_Number"
+DRAW
+X 1 1 0 0 200 R 50 50 0 0 P
+X 3 3 0 -100 200 R 50 50 0 0 P
+X 2 2 800 0 200 L 50 50 0 0 P
+X 4 4 800 -100 200 L 50 50 0 0 P
+P 5 0 1 6 200 100 600 100 600 -200 200 -200 200 100 N
+ENDDRAW
+ENDDEF
+#
+#End Library

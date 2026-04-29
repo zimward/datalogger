@@ -1,0 +1,6 @@
+(sym_lib_table
+  (version 7)
+  (lib (name "spanw")(type "KiCad")(uri "${KIPRJMOD}/Library/ADPL16000AATA+T/KiCad/ADPL16000AATA+T.kicad_sym")(options "")(descr ""))
+  (lib (name "hcrn200")(type "KiCad")(uri "${KIPRJMOD}/Library/HCNR200-300E/KiCADv6/2025-02-26_10-51-50.kicad_sym")(options "")(descr ""))
+  (lib (name "sdcard")(type "KiCad")(uri "${KIPRJMOD}/Library/DM3AT-SF-PEJM5/KiCad/DM3AT-SF-PEJM5.kicad_sym")(options "")(descr ""))
+)

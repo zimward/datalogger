@@ -1,0 +1,9 @@
+EESchema-DOCLIB  Version 2.0
+#
+$CMP ADPL16000AATA+T
+D 60V, 400mA, Ultra-Small, Hi gh-Efficiency, Synchronous Step-Down DC-DC Converters
+K
+F https://www.analog.com/media/en/technical-documentation/data-sheets/adpl16000.pdf
+$ENDCMP
+#
+#End Doc Library
